@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/VictoriaMetrics/metrics"
@@ -38,6 +39,6 @@ func CollectTunnelMetrics() {
 		if tunnel.Status == "healthy" {
 			status = 1
 		}
-		metrics.GetOrCreateGauge(fmt.Sprintf(`zerotrust_tunnels_up{id="%s", name="%s"}`, tunnel.ID, tunnel.Name), func() float64 { return float64(status) })
+		metrics.GetOrCreateGauge(fmt.Sprintf(`zerotrust_tunnels_up{id="%s", name="%s"}`, tunnel.ID, strings.TrimSpace(tunnel.Name)), func() float64 { return float64(status) })
 	}
 }
