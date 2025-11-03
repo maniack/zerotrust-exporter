@@ -55,7 +55,7 @@ type HTTPResults struct {
 	} `json:"resourceFetchTime"`
 }
 
-type DexTests struct {
+type Tests struct {
 	TestID            string             `json:"id"`
 	TestName          string             `json:"name"`
 	Kind              string             `json:"kind"`
@@ -104,14 +104,14 @@ func createRequest(ctx context.Context, url string, page int, perPage int) (*htt
 }
 
 // CollectDexTests fetches all the tests from the dex API
-func CollectDexTests(ctx context.Context, accountID string) (map[string]DexTests, error) {
+func CollectDexTests(ctx context.Context, accountID string) (map[string]Tests, error) {
 	log.Printf("Fetching dex tests for account %s", accountID)
 	startTime := time.Now()
-	url := fmt.Sprintf("https://api.cloudflare.com/client/v4/accounts/%s/dex/tests", accountID)
+	url := fmt.Sprintf("https://api.cloudflare.com/client/v4/accounts/%s/dex/tests/overview", accountID)
 	page := 1
 	perPage := 50
 
-	tests := make(map[string]DexTests)
+	tests := make(map[string]Tests)
 
 	for {
 		log.Printf("Fetching page %d of dex tests", page)
@@ -158,7 +158,7 @@ func CollectDexTests(ctx context.Context, accountID string) (map[string]DexTests
 				continue
 			}
 
-			var dexTest DexTests
+			var dexTest Tests
 			if err := json.Unmarshal(data, &dexTest); err != nil {
 				log.Printf("Error unmarshalling test: %v", err)
 				continue

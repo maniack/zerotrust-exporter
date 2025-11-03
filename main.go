@@ -13,16 +13,17 @@ import (
 
 // Command-line flags
 var (
-	apiKey        string
-	accountID     string
-	debug         bool
-	enableDevices bool
-	enableUsers   bool
-	enableTunnels bool
-	enableDex     bool
-	listenAddr    string
-	port          int
-	client        *cloudflare.API
+	apiKey         string
+	accountID      string
+	debug          bool
+	enableDevices  bool
+	enableUsers    bool
+	enableTunnels  bool
+	enableDex      bool
+	enableMagicWAN bool
+	listenAddr     string
+	port           int
+	client         *cloudflare.API
 )
 
 func init() {
@@ -34,6 +35,7 @@ func init() {
 	enableUsers = os.Getenv("USERS") == "true"
 	enableTunnels = os.Getenv("TUNNELS") == "true"
 	enableDex = os.Getenv("DEX") == "true"
+	enableMagicWAN = os.Getenv("MWAN") == "true"
 	listenAddr = os.Getenv("INTERFACE")
 	port = 9184 // Default port
 	if portEnv := os.Getenv("PORT"); portEnv != "" {
@@ -48,6 +50,7 @@ func init() {
 	flag.BoolVar(&enableUsers, "users", enableUsers, "Enable users metrics")
 	flag.BoolVar(&enableTunnels, "tunnels", enableTunnels, "Enable tunnels metrics")
 	flag.BoolVar(&enableDex, "dex", enableDex, "Enable dex metrics")
+	flag.BoolVar(&enableMagicWAN, "mwan", enableMagicWAN, "Enable magic wan metrics")
 	flag.StringVar(&listenAddr, "interface", listenAddr, "Listening interface (default: any)")
 	flag.IntVar(&port, "port", port, "Listening port (default: 9184)")
 	flag.Parse()
@@ -67,7 +70,7 @@ func init() {
 	}
 
 	// Initialize config
-	config.InitConfig(apiKey, accountID, debug, enableDevices, enableUsers, enableTunnels, enableDex, client)
+	config.InitConfig(apiKey, accountID, debug, enableDevices, enableUsers, enableTunnels, enableDex, enableMagicWAN, client)
 }
 
 func main() {

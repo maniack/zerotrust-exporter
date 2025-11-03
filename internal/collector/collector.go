@@ -12,6 +12,7 @@ import (
 	"github.com/vinistoisr/zerotrust-exporter/internal/config"
 	"github.com/vinistoisr/zerotrust-exporter/internal/devices"
 	"github.com/vinistoisr/zerotrust-exporter/internal/dex"
+	"github.com/vinistoisr/zerotrust-exporter/internal/magicwan"
 	"github.com/vinistoisr/zerotrust-exporter/internal/tunnels"
 	"github.com/vinistoisr/zerotrust-exporter/internal/users"
 )
@@ -35,12 +36,14 @@ func MetricsHandler(w http.ResponseWriter, req *http.Request) {
 	// create a channel between device metrics and user metrics
 	deviceMetricsChan := make(chan map[string]devices.DeviceStatus)
 
+	appmetrics.SetUpMetric(1)
+
 	// Create a wait group to wait for all goroutines to complete
-	var wg sync.WaitGroup
-	wg.Add(4)
+	wg := new(sync.WaitGroup)
 
 	// GO Collect device metrics
 	go func() {
+		wg.Add(1)
 		defer wg.Done()
 		if config.EnableDevices {
 			log.Println("Collecting device metrics...")
@@ -54,10 +57,11 @@ func MetricsHandler(w http.ResponseWriter, req *http.Request) {
 
 	// GO Collect user metrics
 	go func() {
+		wg.Add(1)
+		deviceMetrics, ok := <-deviceMetricsChan
 		defer wg.Done()
 		if config.EnableUsers {
 			log.Println("Waiting for device metrics...")
-			deviceMetrics, ok := <-deviceMetricsChan
 			if ok {
 				users.CollectUserMetrics(deviceMetrics)
 			} else {
@@ -68,6 +72,7 @@ func MetricsHandler(w http.ResponseWriter, req *http.Request) {
 
 	// GO Collect tunnel metrics
 	go func() {
+		wg.Add(1)
 		defer wg.Done()
 		if config.EnableTunnels {
 			log.Println("Collecting tunnel metrics...")
@@ -77,10 +82,21 @@ func MetricsHandler(w http.ResponseWriter, req *http.Request) {
 
 	// Go Collect dex metrics
 	go func() {
+		wg.Add(1)
 		defer wg.Done()
 		if config.EnableDex {
 			log.Println("Collecting dex metrics...")
 			dex.CollectDexMetrics(context.TODO(), config.AccountID)
+		}
+	}()
+
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
+		if config.EnableMagicWAN {
+			log.Println("Collecting magic wan metrics...")
+			magicwan.CollectMagicWANState(context.TODO())
+			magicwan.CollectMagicWANBandwidth(context.TODO())
 		}
 	}()
 
