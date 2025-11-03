@@ -1,26 +1,20 @@
-# Use an official Golang runtime as a parent image
-FROM golang:1.22-alpine
-
-# Install git for go module fetching
-RUN apk add --no-cache git
-
-# Set the Current Working Directory inside the container
-WORKDIR /app
-
-# Copy go.mod and go.sum files
-COPY go.mod go.sum ./
-
-# Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
-RUN go mod download
-
-# Copy the source from the current directory to the Working Directory inside the container
+# syntax=docker/dockerfile:1.6
+FROM golang:1.24-alpine AS builder
+RUN apk add --no-cache build-base git
+WORKDIR /src
 COPY . .
+ENV CGO_ENABLED=0 GOOS=linux
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    go mod tidy
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    go build -trimpath -ldflags "-s -w" -o /bin/zerotrust-exporter .
 
-# Build the Go app
-RUN go build -o zerotrust-exporter .
-
-# Expose port 9184 to the outside world
+FROM alpine:3.20
+RUN apk add --no-cache ca-certificates tzdata
+RUN addgroup -S app && adduser -S app -G app
+COPY --from=builder /bin/zerotrust-exporter /bin/zerotrust-exporter
+USER app
 EXPOSE 9184
-
-# Command to run the executable with environment variables
-CMD ["sh", "-c", "./zerotrust-exporter -apikey=${API_KEY} -accountid=${ACCOUNT_ID} -debug=${DEBUG} -devices=${DEVICES} -users=${USERS} -tunnels=${TUNNELS} -dex=${DEX} -interface=${INTERFACE} -port=${PORT}"]
+ENTRYPOINT ["/bin/zerotrust-exporter"]
