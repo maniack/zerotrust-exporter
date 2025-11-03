@@ -13,7 +13,7 @@ import (
 )
 
 const getTunnelHealthCheckResults = `
-query GetTunnelHealthCheckResults($accountTag: string!, $datetimeStart: Time!, $datetimeEnd: Time!) {
+query GetTunnelHealthCheckResults($accountTag: String!, $datetimeStart: Time!, $datetimeEnd: Time!) {
   viewer {
     accounts(filter: {accountTag: $accountTag}) {
       magicTransitTunnelHealthChecksAdaptiveGroups(

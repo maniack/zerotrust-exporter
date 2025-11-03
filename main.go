@@ -4,7 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"time"
 
 	"github.com/cloudflare/cloudflare-go"
 	"github.com/vinistoisr/zerotrust-exporter/internal/collector"
@@ -55,6 +57,9 @@ func init() {
 	flag.IntVar(&port, "port", port, "Listening port (default: 9184)")
 	flag.Parse()
 
+	// Set default HTTP client timeout to avoid hangs
+	http.DefaultClient.Timeout = 15 * time.Second
+
 	// Ensure required flags are provided
 	if apiKey == "" || accountID == "" {
 		fmt.Println("Both apikey and accountid are required")
@@ -82,7 +87,7 @@ func main() {
 		log.Printf("Users metrics enabled: %v", enableUsers)
 		log.Printf("Tunnels metrics enabled: %v", enableTunnels)
 		log.Printf("Dex metrics enabled: %v", enableDex)
-		log.Printf("API Key: %s%s", "************", apiKey[len(apiKey)-4:])
+		// Do not log API key for security reasons
 		log.Printf("Account ID: %s", accountID)
 	} else {
 		// Print normal startup message

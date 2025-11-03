@@ -101,14 +101,13 @@ func fetchTestDetails(ctx context.Context, accountID string, testID string, wg *
 		if err != nil {
 			log.Printf("Error fetching traceroute test %s: %v", testID, err)
 			appmetrics.IncApiErrorsCounter()
-			appmetrics.SetUpMetric(0)
 			time.Sleep(time.Second * time.Duration(attempt*attempt)) // Exponential backoff
 			continue
 		}
-		defer resp.Body.Close()
 
 		if resp.StatusCode == http.StatusServiceUnavailable || resp.StatusCode == http.StatusGatewayTimeout {
 			log.Printf("Service unavailable for test %s: %s", testID, resp.Status)
+			resp.Body.Close()
 			time.Sleep(time.Second * time.Duration(attempt*attempt)) // Exponential backoff
 			continue
 		}
@@ -116,7 +115,7 @@ func fetchTestDetails(ctx context.Context, accountID string, testID string, wg *
 		if resp.StatusCode != http.StatusOK {
 			log.Printf("Error fetching traceroute test %s: %s", testID, resp.Status)
 			appmetrics.IncApiErrorsCounter()
-			appmetrics.SetUpMetric(0)
+			resp.Body.Close()
 			return
 		}
 
@@ -124,9 +123,10 @@ func fetchTestDetails(ctx context.Context, accountID string, testID string, wg *
 		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 			log.Printf("Error decoding response for test %s: %v", testID, err)
 			appmetrics.IncApiErrorsCounter()
-			appmetrics.SetUpMetric(0)
+			resp.Body.Close()
 			return
 		}
+		resp.Body.Close()
 
 		if !response.Success {
 			log.Printf("Error in response for test %s: %v", testID, response.Messages)

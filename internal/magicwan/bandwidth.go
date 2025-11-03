@@ -13,15 +13,14 @@ import (
 )
 
 const getTunnelBandwidth = `
-query GetTunnelBandwidth($accountTag: string, $datetimeStart: string, $datetimeEnd: string) {
+query GetTunnelBandwidth($accountTag: String!, $datetimeStart: Time!, $datetimeEnd: Time!) {
   viewer {
     accounts(filter: {accountTag: $accountTag}) {
       magicTransitTunnelTrafficAdaptiveGroups(
         limit: 100,
         filter: {
           datetime_geq: $datetimeStart,
-          datetime_lt:  $datetimeEnd,
-          direction: $direction
+          datetime_lt:  $datetimeEnd
         }
       ) {
         avg {
@@ -30,7 +29,7 @@ query GetTunnelBandwidth($accountTag: string, $datetimeStart: string, $datetimeE
         dimensions {
           tunnelName
           edgeColoName
-          datetimeFiveMinutes
+          datetimeFiveMinute
         }
       }
     }
@@ -95,7 +94,6 @@ func CollectMagicWANBandwidth(ctx context.Context) {
 	var gqlResp TunnelBandwidth
 	if err := json.Unmarshal(respBytes, &gqlResp); err != nil {
 		log.Println("Failed to parse GraphQL response:", err)
-		appmetrics.SetUpMetric(0)
 		return
 	}
 

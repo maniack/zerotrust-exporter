@@ -125,26 +125,25 @@ func CollectDexTests(ctx context.Context, accountID string) (map[string]Tests, e
 		if err != nil {
 			log.Printf("Error fetching dex tests: %v", err)
 			appmetrics.IncApiErrorsCounter()
-			appmetrics.SetUpMetric(0)
 			return nil, err
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			log.Printf("Error fetching dex tests: %s", resp.Status)
-			appmetrics.IncApiErrorsCounter()
-			appmetrics.SetUpMetric(0)
-			return nil, fmt.Errorf("error fetching dex tests: %s", resp.Status)
 		}
 
 		var response ApiResponse
-		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-			log.Printf("Error decoding response: %v", err)
-			appmetrics.IncApiErrorsCounter()
-			appmetrics.SetUpMetric(0)
-			return nil, err
+		func() {
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				log.Printf("Error fetching dex tests: %s", resp.Status)
+				appmetrics.IncApiErrorsCounter()
+				return
+			}
+			if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+				log.Printf("Error decoding response: %v", err)
+				appmetrics.IncApiErrorsCounter()
+			}
+		}()
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("error fetching dex tests: %s", resp.Status)
 		}
-
 		if !response.Success {
 			log.Printf("Error fetching dex tests: %v", response.Messages)
 			appmetrics.IncApiErrorsCounter()
@@ -208,7 +207,6 @@ func CollectDexMetrics(ctx context.Context, accountID string) {
 	if err != nil {
 		log.Printf("Error collecting dex metrics: %v", err)
 		appmetrics.IncApiErrorsCounter()
-		appmetrics.SetUpMetric(0)
 		return
 	}
 

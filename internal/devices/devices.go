@@ -32,7 +32,6 @@ func fetchDeviceStatus(ctx context.Context, accountID string) (map[string]Device
 	if err != nil {
 		log.Printf("Error creating request: %v", err)
 		appmetrics.IncApiErrorsCounter()
-		appmetrics.SetUpMetric(0)
 		return nil, err
 	}
 	// add authorization headers
@@ -91,7 +90,6 @@ func CollectDeviceMetrics() map[string]DeviceStatus {
 	if err != nil {
 		log.Printf("Error fetching device status: %v", err)
 		appmetrics.IncApiErrorsCounter()
-		appmetrics.SetUpMetric(0)
 		return nil
 	}
 

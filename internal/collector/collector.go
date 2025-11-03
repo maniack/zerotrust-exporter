@@ -33,72 +33,78 @@ func StartServer(addr string) {
 func MetricsHandler(w http.ResponseWriter, req *http.Request) {
 	// Start timer for scrape duration
 	startTime := time.Now()
+
+	// Derive context with timeout from request context for all collectors
+	ctx, cancel := context.WithTimeout(req.Context(), 25*time.Second)
+	defer cancel()
+
 	// create a channel between device metrics and user metrics
-	deviceMetricsChan := make(chan map[string]devices.DeviceStatus)
+	deviceMetricsChan := make(chan map[string]devices.DeviceStatus, 1)
 
 	appmetrics.SetUpMetric(1)
 
 	// Create a wait group to wait for all goroutines to complete
 	wg := new(sync.WaitGroup)
 
-	// GO Collect device metrics
-	go func() {
+	// Collect device metrics
+	if config.EnableDevices {
 		wg.Add(1)
-		defer wg.Done()
-		if config.EnableDevices {
+		go func() {
+			defer wg.Done()
 			log.Println("Collecting device metrics...")
 			deviceMetrics := devices.CollectDeviceMetrics()
 			deviceMetricsChan <- deviceMetrics
 			close(deviceMetricsChan)
-		} else {
-			close(deviceMetricsChan)
-		}
-	}()
+		}()
+	} else {
+		// No devices collection; close the channel so users collector won't block
+		close(deviceMetricsChan)
+	}
 
-	// GO Collect user metrics
-	go func() {
+	// Collect user metrics
+	if config.EnableUsers {
 		wg.Add(1)
-		deviceMetrics, ok := <-deviceMetricsChan
-		defer wg.Done()
-		if config.EnableUsers {
+		go func() {
+			defer wg.Done()
 			log.Println("Waiting for device metrics...")
-			if ok {
+			if deviceMetrics, ok := <-deviceMetricsChan; ok {
 				users.CollectUserMetrics(deviceMetrics)
 			} else {
 				log.Println("Failed to read device metrics from channel.")
 			}
-		}
-	}()
+		}()
+	}
 
-	// GO Collect tunnel metrics
-	go func() {
+	// Collect tunnel metrics
+	if config.EnableTunnels {
 		wg.Add(1)
-		defer wg.Done()
-		if config.EnableTunnels {
+		go func() {
+			defer wg.Done()
 			log.Println("Collecting tunnel metrics...")
 			tunnels.CollectTunnelMetrics()
-		}
-	}()
+		}()
+	}
 
-	// Go Collect dex metrics
-	go func() {
+	// Collect dex metrics
+	if config.EnableDex {
 		wg.Add(1)
-		defer wg.Done()
-		if config.EnableDex {
+		go func() {
+			defer wg.Done()
 			log.Println("Collecting dex metrics...")
-			dex.CollectDexMetrics(context.TODO(), config.AccountID)
-		}
-	}()
+			dex.CollectDexMetrics(ctx, config.AccountID)
+		}()
+	}
 
-	go func() {
+	// Collect magicwan metrics
+	if config.EnableMagicWAN {
 		wg.Add(1)
-		defer wg.Done()
-		if config.EnableMagicWAN {
+		go func() {
+			defer wg.Done()
 			log.Println("Collecting magic wan metrics...")
-			magicwan.CollectMagicWANState(context.TODO())
-			magicwan.CollectMagicWANBandwidth(context.TODO())
-		}
-	}()
+			magicwan.CollectMagicWANState(ctx)
+			magicwan.CollectMagicWANBandwidth(ctx)
+		}()
+	}
 
 	// Wait for all metrics collection to complete
 	log.Println("Waiting for all metrics collection to complete...")

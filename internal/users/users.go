@@ -52,7 +52,6 @@ func CollectUserMetrics(deviceMetrics map[string]devices.DeviceStatus) {
 	if err != nil {
 		log.Printf("Error fetching users: %v", err)
 		appmetrics.IncApiErrorsCounter()
-		appmetrics.SetUpMetric(0)
 		return
 	}
 
